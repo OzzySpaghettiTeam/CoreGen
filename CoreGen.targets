@@ -1,0 +1,47 @@
+<Project>
+  <!--
+    Adds the CoreGen source generator to a project that replaces the game's Assembly-CSharp:
+
+      <Import Project="../Tools/CoreGen/CoreGen.targets" />
+
+    Layout problems are compile errors (in the IDE too); fields a kept script adds are compiled as [NonSerialized]
+    (shown as CG0014 hints); the project gets CoreGen.Fixer (call CoreGen.Fixer.Install()
+    before the first scene), the [RebuiltScript]/[DroppedScript] attributes and the generated CoreGen.CoreData.
+
+    Properties:
+      CoreGen          false: no checks and nothing rebuilt (the runtime and CoreFill() still compile)
+      CoreGenGameData  the game's data folder (default: $(BaseGamePath)/CasualtiesUnknown_Data)
+      CoreGenManaged   its Managed folder, for engine assemblies (default: $(GameAssembliesDir))
+      VanillaAssembly  the vanilla Assembly-CSharp.dll. Default: a copy taken from Managed on the first build
+                       (obj/coregen), so it stays vanilla after the project's build is installed over the game's.
+                       CoreGen refuses an assembly that was itself built with CoreGen.
+  -->
+  <PropertyGroup>
+    <CoreGenGameData Condition="'$(CoreGenGameData)' == ''">$(BaseGamePath)/CasualtiesUnknown_Data</CoreGenGameData>
+    <CoreGenManaged Condition="'$(CoreGenManaged)' == ''">$(GameAssembliesDir)</CoreGenManaged>
+    <VanillaAssembly Condition="'$(VanillaAssembly)' == ''">$(MSBuildProjectDirectory)/$(BaseIntermediateOutputPath)coregen/Assembly-CSharp.dll</VanillaAssembly>
+    <CoreGenVanilla>$(VanillaAssembly)</CoreGenVanilla>
+    <CoreGenGameData Condition="'$(CoreGen)' == 'false'"></CoreGenGameData>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="CoreGenGameData;CoreGenVanilla;CoreGenManaged" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)CoreGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!--
+    Fields of kept scripts that vanilla does not have: the generator lists them, and this marks them [NonSerialized] in
+    the compiled assembly (Weaver.cs), before it is copied to the output.
+  -->
+  <UsingTask TaskName="CoreGen.WeaveNotInVanilla" AssemblyFile="$(MSBuildThisFileDirectory)bin/$(Configuration)/netstandard2.0/CoreGen.dll" />
+  <Target Name="CoreGenWeave" AfterTargets="CoreCompile" Condition="'$(CoreGen)' != 'false'">
+    <WeaveNotInVanilla Assembly="@(IntermediateAssembly->'%(FullPath)')" />
+  </Target>
+
+  <!-- Before the compiler options are written (real and IDE design-time builds alike). -->
+  <Target Name="CoreGenPinVanilla" BeforeTargets="GenerateMSBuildEditorConfigFileCore" Condition="'$(CoreGen)' != 'false' And !Exists('$(VanillaAssembly)')">
+    <Error Condition="!Exists('$(CoreGenManaged)/Assembly-CSharp.dll')" Text="CoreGen: no Assembly-CSharp.dll in $(CoreGenManaged) to take the vanilla copy from" />
+    <Copy SourceFiles="$(CoreGenManaged)/Assembly-CSharp.dll" DestinationFiles="$(VanillaAssembly)" />
+    <Message Importance="high" Text="CoreGen: pinned the vanilla Assembly-CSharp at $(VanillaAssembly)" />
+  </Target>
+</Project>

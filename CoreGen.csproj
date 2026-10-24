@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    CoreGen: a Roslyn source generator. It checks the serialized layout of every script the vanilla game's assets hold
+    data for, and generates the code that rebuilds the scripts a project moved out of the vanilla layout. The same
+    assembly holds the MSBuild task that marks added fields [NonSerialized] after compiling (Weaver.cs). Projects use
+    it through CoreGen.targets; see Generator.cs for what it emits.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>false</EnforceExtendedAnalyzerRules>
+    <!-- Analyzers are loaded by the compiler; nothing of this goes into the consuming assembly. -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
+    <!-- Roslyn 4.8 = .NET SDK 8.0.100, the oldest compiler the generator must run in. -->
+    <NoWarn>$(NoWarn);RS2008</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
+    <PackageReference Include="AssetsTools.NET" Version="3.0.5" PrivateAssets="all" GeneratePathProperty="true" />
+    <PackageReference Include="AssetsTools.NET.MonoCecil" Version="3.0.4" PrivateAssets="all" GeneratePathProperty="true" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.6" PrivateAssets="all" GeneratePathProperty="true" />
+    <!-- The weaving task (Weaver.cs) runs inside MSBuild, which provides this. -->
+    <PackageReference Include="Microsoft.Build.Framework" Version="17.8.3" PrivateAssets="all" ExcludeAssets="runtime" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- MSBuild loads the task's dependencies from its folder. -->
+    <None Include="$(PKGMono_Cecil)/lib/netstandard2.0/Mono.Cecil*.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The runtime half: compiled into the consuming project (emitted as source), not into the generator. -->
+    <Compile Remove="Runtime/**" />
+    <EmbeddedResource Include="Runtime/*.cs" LogicalName="CoreGen.Runtime.%(Filename).cs" />
+  </ItemGroup>
+
+  <!-- The compiler loads analyzer dependencies only when they are passed as analyzers too. -->
+  <PropertyGroup>
+    <GetTargetPathDependsOn>$(GetTargetPathDependsOn);CoreGenDependencyPaths</GetTargetPathDependsOn>
+  </PropertyGroup>
+  <Target Name="CoreGenDependencyPaths">
+    <ItemGroup>
+      <TargetPathWithTargetPlatformMoniker Include="$(PKGAssetsTools_NET)/lib/netstandard2.0/AssetsTools.NET.dll" IncludeRuntimeDependency="false" />
+      <TargetPathWithTargetPlatformMoniker Include="$(PKGAssetsTools_NET_MonoCecil)/lib/netstandard2.0/AssetsTools.NET.MonoCecil.dll" IncludeRuntimeDependency="false" />
+      <TargetPathWithTargetPlatformMoniker Include="$(PKGMono_Cecil)/lib/netstandard2.0/Mono.Cecil*.dll" IncludeRuntimeDependency="false" />
+    </ItemGroup>
+  </Target>
+</Project>
