@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     Tests for the CoreGen source generator, against the real game files (path from the workspace's vars.targets) and the
-    project's sources: the vanilla decompile (GameDecomp), variants of it, and OpenScav. dotnet test Tools/CoreGen/Tests
+    project's sources: the vanilla decompile (GameDecomp), variants of it, and OpenScav. dotnet test OpenScav/Tools/CoreGen/Tests
   -->
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>

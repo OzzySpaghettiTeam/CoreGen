@@ -2,7 +2,7 @@
   <!--
     Adds the CoreGen source generator to a project that replaces the game's Assembly-CSharp:
 
-      <Import Project="../Tools/CoreGen/CoreGen.targets" />
+      <Import Project="Tools/CoreGen/CoreGen.targets" />
 
     Layout problems are compile errors (in the IDE too); fields a kept script adds are compiled as [NonSerialized]
     (shown as CG0014 hints); the project gets CoreGen.Fixer (call CoreGen.Fixer.Install()
