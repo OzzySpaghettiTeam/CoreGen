@@ -33,6 +33,8 @@
   <ItemGroup>
     <!-- The runtime half: compiled into the consuming project (emitted as source), not into the generator. -->
     <Compile Remove="Runtime/**" />
+    <!-- The test project lives inside this folder. -->
+    <Compile Remove="Tests/**" />
     <EmbeddedResource Include="Runtime/*.cs" LogicalName="CoreGen.Runtime.%(Filename).cs" />
   </ItemGroup>
 
