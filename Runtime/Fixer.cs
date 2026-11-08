@@ -3,6 +3,7 @@
 // </auto-generated>
 #nullable disable
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
@@ -47,6 +48,44 @@ namespace CoreGen
 				Assets.Forget();
 				Guard("scene " + scene.name, () => CoreData.FixScene(scene.buildIndex, new Hierarchy(scene, persistentMarker)));
 			};
+		}
+
+		private static HashSet<string> missingScripts;
+
+		/// <summary>
+		/// Whether a Unity log message is a warning Unity gives by design for the scripts CoreGen rebuilds or drops
+		/// ("referenced script is missing", "different serialization layout"). Unity's native logger writes them to
+		/// Player.log regardless; a host's log listener (e.g. BepInEx's) can skip them with this.
+		/// </summary>
+		public static bool IsExpectedLog(string message)
+		{
+			if (message == null)
+			{
+				return false;
+			}
+			// The second warning of a pair names only the GameObject; the first one names the script.
+			if (message.StartsWith("The referenced script on this Behaviour (Game Object '", StringComparison.Ordinal))
+			{
+				return true;
+			}
+			string script = Between(message, "The referenced script (", ") on this Behaviour is missing!")
+				?? Between(message, "A scripted object (probably ", "?) has a different serialization layout");
+			if (script == null)
+			{
+				return false;
+			}
+			missingScripts ??= new HashSet<string>(CoreData.MissingScripts, StringComparer.Ordinal);
+			return missingScripts.Contains(script);
+		}
+
+		private static string Between(string s, string prefix, string suffix)
+		{
+			if (!s.StartsWith(prefix, StringComparison.Ordinal))
+			{
+				return null;
+			}
+			int end = s.IndexOf(suffix, prefix.Length, StringComparison.Ordinal);
+			return end < 0 ? null : s.Substring(prefix.Length, end - prefix.Length);
 		}
 
 		private static void Guard(string what, Action action)

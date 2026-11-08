@@ -105,6 +105,23 @@ public sealed class Emitter
         }
         data.Close();
         data.Close();
+        data.Line("");
+        data.Line(
+            "/// <summary>Vanilla scripts gone from the global namespace (rebuilt or dropped), by class name: Unity warns about each when it loads their data.</summary>"
+        );
+        IEnumerable<string> missing =
+            planner == null
+                ? Enumerable.Empty<string>()
+                : planner
+                    .Scripts.Where(p =>
+                        p.Value.Fate is ScriptFate.Rebuilt or ScriptFate.Dropped
+                    )
+                    .Select(p => p.Key.Class)
+                    .Distinct()
+                    .OrderBy(n => n, StringComparer.Ordinal);
+        data.Line(
+            $"public static readonly string[] MissingScripts = {{ {string.Join(", ", missing.Select(Str))} }};"
+        );
         foreach (Scope s in scopes)
         {
             data.Line("");
